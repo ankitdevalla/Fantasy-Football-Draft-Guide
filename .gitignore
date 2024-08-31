@@ -1,0 +1,5 @@
+# Ignore the original CSV file
+fantasy_football_players.csv
+
+# Ignore .venv directory
+.venv
