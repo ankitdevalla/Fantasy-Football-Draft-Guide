@@ -40,7 +40,7 @@ def input_pick(participant, draft_tracker, available_players, original_names):
             draft_tracker[participant].append(original_name)
             available_players.remove(player_name)
             print(f"{original_name} has been drafted by Participant {participant}.")
-            break
+            return original_name
         else:
             print(f"Player {player_name} is either already drafted or does not exist. Please try again.")
 
@@ -50,17 +50,73 @@ def initialize_available_players(df):
     original_names = {player_name.lower(): player_name for player_name in df['PLAYER NAME']}
     return available_players, original_names
 
-# Run the main loop
+# Define the roster structure using a map
+def define_roster_structure():
+    return {
+        "QB": 1,
+        "RB": 2,
+        "WR": 2,
+        "TE": 1,
+        "FLEX": 1,
+        "K": 1,
+        "DST": 1,
+        "Bench": 6
+    }
+
+# Initialize the user's roster tracking
+def initialize_user_roster():
+    return {
+        "QB": 0,
+        "RB": 0,
+        "WR": 0,
+        "TE": 0,
+        "FLEX": 0,
+        "K": 0,
+        "DST": 0,
+        "Bench": 0
+    }
+
+# Function to update the user's roster after drafting a player
+def update_user_roster(user_roster, player_position, roster_structure):
+    if player_position in ["RB", "WR", "TE"] and user_roster[player_position] < roster_structure[player_position]:
+        user_roster[player_position] += 1
+    elif player_position in ["RB", "WR", "TE"] and user_roster["FLEX"] < roster_structure["FLEX"]:
+        user_roster["FLEX"] += 1
+    elif player_position in user_roster and user_roster[player_position] < roster_structure[player_position]:
+        user_roster[player_position] += 1
+    elif user_roster["Bench"] < roster_structure["Bench"]:
+        user_roster["Bench"] += 1
+    elif user_roster["K"] < roster_structure["K"]:
+        user_roster["K"] += 1
+    elif user_roster["DST"] < roster_structure["DST"]:
+        user_roster["DST"] += 1
+    else:
+        print(f"No available roster spot for position {player_position}. Player goes to Bench.")
+        user_roster["Bench"] += 1
+
+    print(f"Updated user roster: {user_roster}")
+
+# Function to get the position of a player from the DataFrame
+def get_player_position(df, player_name):
+    position = df.loc[df['PLAYER NAME'].str.lower() == player_name.lower(), 'POS'].values[0]
+    return position
+
+# Example usage
 if __name__ == "__main__":
     user_draft_position = get_user_draft_position()
     total_participants = get_total_participants()
     draft_tracker = initialize_draft_tracker(total_participants)
     available_players, original_names = initialize_available_players(df)
+    roster_structure = define_roster_structure()  # Define the roster structure
+    user_roster = initialize_user_roster()
 
-    # Example of how to use input_pick in a round
+    # Example of how to use input_pick and update the user's roster
     for round_num in range(1, 3):  # You can loop over multiple rounds
         for participant in range(1, total_participants + 1):
-            input_pick(participant, draft_tracker, available_players, original_names)
+            drafted_player = input_pick(participant, draft_tracker, available_players, original_names)
+            if participant == user_draft_position:
+                player_position = get_player_position(df, drafted_player)
+                update_user_roster(user_roster, player_position, roster_structure)
     
-    print("Draft tracker after one round:")
-    print(draft_tracker)
+    print("Final user roster:")
+    print(user_roster)
