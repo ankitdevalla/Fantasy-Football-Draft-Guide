@@ -3,7 +3,7 @@ def simulate_pick(available_players, df):
     available_df = df[df['PLAYER NAME'].str.lower().isin(available_players)].copy()
     available_df.sort_values(by='RK', inplace=True)
 
-    # Pick the player with the lowest ADP (first in the sorted list)
+    # Pick the player with the lowest rank (first in the sorted list)
     if not available_df.empty:
         selected_player = available_df.iloc[0]
         return selected_player['PLAYER NAME'], selected_player['POS']
