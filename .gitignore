@@ -1,5 +1,5 @@
 # Ignore the original CSV file
-fantasy_football_players.csv
-
-# Ignore .venv directory
+FantasyPros_2024_Draft.xlsx
+cleaned_fantasy_football_players.csv
+.DS_Store
 .venv
