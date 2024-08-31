@@ -1,5 +1,6 @@
 import pandas as pd
 from recommendation import recommend_players, display_recommended_players
+from autopick import simulate_pick
 
 # Load the cleaned CSV file
 df = pd.read_csv('cleaned_fantasy_football_players.csv')
@@ -125,18 +126,22 @@ if __name__ == "__main__":
     # Example of how to use input_pick and update the user's roster
     for round_num in range(1, round_num + 1):  # You can loop over multiple rounds
         for participant in range(1, total_participants + 1):
-            # Check if it's the user's turn
             if participant == user_draft_position:
                 # Recommend players for the user's next pick
                 recommended_players = recommend_players(user_roster, available_players, df, roster_structure, top_n=3)
                 display_recommended_players(recommended_players)
-            
-            # After recommendations, user makes a pick
-            drafted_player = input_pick(participant, draft_tracker, available_players, original_names)
-            
-            if participant == user_draft_position:
+                
+                # User makes a pick
+                drafted_player = input_pick(participant, draft_tracker, available_players, original_names)
                 player_position = get_player_position(df, drafted_player)
                 update_user_roster(user_roster, player_position, roster_structure)
+            else:
+                # Automatically simulate the pick for other participants
+                simulated_player, simulated_position = simulate_pick(available_players, df)
+                if simulated_player:
+                    draft_tracker[participant].append(simulated_player)
+                    available_players.remove(simulated_player.lower())
+                    print(f"Participant {participant} selected {simulated_player} ({simulated_position}).")
     
     print("Final user roster:")
     print(user_roster)
