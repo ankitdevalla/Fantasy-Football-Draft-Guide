@@ -1,4 +1,5 @@
 import pandas as pd
+from recommendation import recommend_players, display_recommended_players
 
 # Load the cleaned CSV file
 df = pd.read_csv('cleaned_fantasy_football_players.csv')
@@ -24,6 +25,17 @@ def get_total_participants():
             return league_size
         except ValueError:
             print("Please enter a valid positive integer for your league size.")
+
+# Prompt the user for the number of rounds in the draft
+def get_total_rounds():
+    while True:
+        try:
+            total_rounds = int(input("Enter the number of rounds in the draft: "))
+            if total_rounds < 1:
+                raise ValueError
+            return total_rounds
+        except ValueError:
+            print("Please enter a valid positive integer for the number of rounds.")
 
 # Initialize a dictionary to keep track of drafted players
 def initialize_draft_tracker(total_participants):
@@ -101,19 +113,27 @@ def get_player_position(df, player_name):
     position = df.loc[df['PLAYER NAME'].str.lower() == player_name.lower(), 'POS'].values[0]
     return position
 
-# Example usage
 if __name__ == "__main__":
     user_draft_position = get_user_draft_position()
     total_participants = get_total_participants()
+    round_num = get_total_rounds()
     draft_tracker = initialize_draft_tracker(total_participants)
     available_players, original_names = initialize_available_players(df)
     roster_structure = define_roster_structure()  # Define the roster structure
     user_roster = initialize_user_roster()
 
     # Example of how to use input_pick and update the user's roster
-    for round_num in range(1, 3):  # You can loop over multiple rounds
+    for round_num in range(1, round_num + 1):  # You can loop over multiple rounds
         for participant in range(1, total_participants + 1):
+            # Check if it's the user's turn
+            if participant == user_draft_position:
+                # Recommend players for the user's next pick
+                recommended_players = recommend_players(user_roster, available_players, df, roster_structure, top_n=3)
+                display_recommended_players(recommended_players)
+            
+            # After recommendations, user makes a pick
             drafted_player = input_pick(participant, draft_tracker, available_players, original_names)
+            
             if participant == user_draft_position:
                 player_position = get_player_position(df, drafted_player)
                 update_user_roster(user_roster, player_position, roster_structure)
