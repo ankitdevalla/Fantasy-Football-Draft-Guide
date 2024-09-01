@@ -15,6 +15,12 @@ connection.once('open', () => {
   console.log('MongoDB database connection established successfully');
 });
 
+const cors = require('cors');
+
+app.use(cors({
+  origin: 'http://localhost:3000', // Allow requests from this origin
+}));
+
 // Example route
 app.get('/', (req, res) => {
   res.send('Hello, world!');
@@ -22,6 +28,9 @@ app.get('/', (req, res) => {
 
 const playerRoutes = require('./routes/playerRoutes');
 app.use('/players', playerRoutes);
+
+const csvRoutes = require('./routes/csvRoutes');  // Adjust path as needed
+app.use('/api', csvRoutes);
 
 
 app.listen(port, () => {

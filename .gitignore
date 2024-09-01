@@ -6,3 +6,4 @@ CLI/__pycache__/
 .venv
 web-app/backend/node_modules/
 web-app/backend/.env
+web-app/node_modules/
