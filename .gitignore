@@ -1,6 +1,6 @@
 # Ignore the original CSV file
 data/FantasyPros_2024_Draft.xlsx
 data/cleaned_fantasy_football_players.csv
-CLI/.DS_Store
+.DS_Store
 .venv
 CLI/__pycache__/
