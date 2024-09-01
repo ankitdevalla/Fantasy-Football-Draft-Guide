@@ -3,7 +3,7 @@ from recommendation import recommend_players, display_recommended_players
 from autopick import simulate_pick
 
 # Load the cleaned CSV file
-df = pd.read_csv('cleaned_fantasy_football_players.csv')
+df = pd.read_csv('../data/cleaned_fantasy_football_players.csv')
 
 # Prompt the user for their draft position
 def get_user_draft_position():
