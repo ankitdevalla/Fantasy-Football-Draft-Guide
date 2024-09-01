@@ -1,8 +1,7 @@
-// models/Player.js
 const mongoose = require('mongoose');
 
-const playerSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+const draftPickSchema = new mongoose.Schema({
+  playerName: { type: String, required: true },
   position: { type: String, required: true },
   rank: { type: Number, required: true },
   tiers: { type: Number, required: true },
@@ -10,5 +9,5 @@ const playerSchema = new mongoose.Schema({
   sosSeason: { type: Number, required: true },
 });
 
-const Player = mongoose.model('Player', playerSchema);
-module.exports = Player;
+const DraftPick = mongoose.model('DraftPick', draftPickSchema);
+module.exports = DraftPick;

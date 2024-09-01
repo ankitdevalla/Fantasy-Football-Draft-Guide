@@ -16,9 +16,8 @@ connection.once('open', () => {
 });
 
 const cors = require('cors');
-
 app.use(cors({
-  origin: 'http://localhost:3000', // Allow requests from this origin
+  origin: 'http://localhost:3000', // Allow requests from the React frontend
 }));
 
 // Example route
@@ -27,10 +26,13 @@ app.get('/', (req, res) => {
 });
 
 const playerRoutes = require('./routes/playerRoutes');
-app.use('/players', playerRoutes);
+app.use('/api', playerRoutes);
 
 const csvRoutes = require('./routes/csvRoutes');  // Adjust path as needed
 app.use('/api', csvRoutes);
+
+const draftRoutes = require('./routes/draftRoutes');
+app.use('/api/draft', draftRoutes);
 
 
 app.listen(port, () => {

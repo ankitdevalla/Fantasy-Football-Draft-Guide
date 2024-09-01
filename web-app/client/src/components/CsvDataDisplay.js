@@ -5,18 +5,19 @@ const CsvDataDisplay = () => {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/csv-data')
+    // Fetch data from the backend API
+    axios.get('http://localhost:8000/api/players')
       .then(response => {
         setData(response.data);
       })
       .catch(error => {
-        console.error('Error fetching the CSV data:', error);
+        console.error('Error fetching the data:', error);
       });
   }, []);
 
   return (
     <div>
-      <h2>CSV Data</h2>
+      <h2>Player Data</h2>
       <table border="1">
         <thead>
           <tr>
