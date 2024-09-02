@@ -162,4 +162,73 @@ router.post('/exit', async (req, res) => {
   }
 });
 
+// Naive Recommendation Algorithm Route
+router.post('/recommend', async (req, res) => {
+  const { userRoster, availablePlayers, rosterStructure, topN } = req.body;
+
+  try {
+    // Fetch all player data
+    const players = await Player.find();
+
+    // Convert the player data into an array of objects
+    const playerData = players.map(player => ({
+      name: player.name,
+      position: player.position,
+      rank: player.rank,
+      tiers: player.tiers,
+      avgPoints: player.avgPoints,
+      sosSeason: player.sosSeason,
+    }));
+
+    // Call the recommendation function
+    const recommendedPlayers = recommendPlayers(userRoster, availablePlayers, playerData, rosterStructure, topN);
+
+    res.json(recommendedPlayers);
+  } catch (error) {
+    console.error('Error generating recommendations:', error);
+    res.status(500).json({ message: 'Error generating recommendations', error });
+  }
+});
+
+function recommendPlayers(userRoster, availablePlayers, playerData, rosterStructure, topN = 3) {
+  const availablePlayersData = playerData.filter(player =>
+    availablePlayers.includes(player.name)
+  );
+
+  availablePlayersData.forEach(player => {
+    player.score = 0.0;
+  });
+
+  const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'DST'];
+  positions.forEach(position => {
+    const positionWeight = userRoster[position] < rosterStructure[position] ? 2.0 : 1.0;
+    availablePlayersData.forEach(player => {
+      if (player.position === position) {
+        player.score += positionWeight;
+      }
+    });
+  });
+
+  availablePlayersData.forEach(player => {
+    player.score += player.avgPoints * 0.5;
+    player.score += (5 - player.sosSeason) * 0.2;
+    player.score += (16 - player.tiers) * 1.0;
+
+    const maxRank = Math.max(...availablePlayersData.map(p => p.rank));
+    player.score += (maxRank - player.rank) * 0.25;
+  });
+
+  availablePlayersData.sort((a, b) => b.score - a.score);
+  const recommendedPlayers = availablePlayersData.slice(0, topN);
+
+  return recommendedPlayers.map(player => ({
+    playerName: player.name,
+    position: player.position,
+    rank: player.rank,
+    tiers: player.tiers,
+    avgPoints: player.avgPoints,
+    sosSeason: player.sosSeason,
+  }));
+}
+
 module.exports = router;

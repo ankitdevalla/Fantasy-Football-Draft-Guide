@@ -11,8 +11,9 @@ const DraftCenter = () => {
   const [playerName, setPlayerName] = useState('');
   const [teams, setTeams] = useState({});
   const [participants, setParticipants] = useState([]);
-  const [playerNames, setPlayerNames] = useState([]); // To store all possible player names
-  const [isDraftStarted, setIsDraftStarted] = useState(false); // Track if draft is started
+  const [playerNames, setPlayerNames] = useState([]);
+  const [isDraftStarted, setIsDraftStarted] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
 
   useEffect(() => {
     axios.get('http://localhost:8000/api/draft/player-names')
@@ -29,11 +30,11 @@ const DraftCenter = () => {
       .then(response => {
         console.log(response.data);
         alert('Draft started!');
-        setIsDraftStarted(true); // Mark the draft as started
-        const participantsList = generateParticipants(totalTeams); // Generate participants
+        setIsDraftStarted(true); 
+        const participantsList = generateParticipants(totalTeams); 
         setParticipants(participantsList);
-        initializeTeams(totalTeams); // Initialize team objects
-        setParticipantName(participantsList[0]); // Set the initial participant to team_1
+        initializeTeams(totalTeams); 
+        setParticipantName(participantsList[0]); 
       })
       .catch(error => {
         console.error('Error starting draft:', error);
@@ -56,29 +57,68 @@ const DraftCenter = () => {
     setTeams(initialTeams);
   };
 
+  const recommendPlayers = (updatedPlayerNames) => {
+    const userRoster = {
+      QB: teams[participantName].filter(player => player.position === 'QB').length,
+      RB: teams[participantName].filter(player => player.position === 'RB').length,
+      WR: teams[participantName].filter(player => player.position === 'WR').length,
+      TE: teams[participantName].filter(player => player.position === 'TE').length,
+      K: teams[participantName].filter(player => player.position === 'K').length,
+      DST: teams[participantName].filter(player => player.position === 'DST').length,
+    };
+
+    const rosterStructure = {
+      QB: 1,
+      RB: 2,
+      WR: 2,
+      TE: 1,
+      K: 1,
+      DST: 1,
+    };
+
+    axios.post('http://localhost:8000/api/draft/recommend', {
+      userRoster,
+      availablePlayers: updatedPlayerNames,
+      rosterStructure,
+      topN: 3
+    })
+    .then(response => {
+      const recommendedPlayers = response.data;
+      console.log('Recommended players:', recommendedPlayers);
+      setRecommendations(recommendedPlayers); 
+    })
+    .catch(error => {
+      console.error('Error fetching recommendations:', error);
+    });
+  };
+
+  useEffect(() => {
+    if (isDraftStarted) {
+      recommendPlayers(playerNames); 
+    }
+  }, [currentPick, participantName]); 
+
   const nextPick = () => {
     let nextPick = currentPick;
     let nextRound = currentRound;
 
     if (currentRound % 2 === 1) {
-      // Odd round (normal order)
       nextPick = currentPick + 1;
       if (nextPick > totalTeams) {
         nextRound += 1;
-        nextPick = totalTeams; // Last team for the next round (reversed)
+        nextPick = totalTeams; 
       }
     } else {
-      // Even round (reverse order)
       nextPick = currentPick - 1;
       if (nextPick < 1) {
         nextRound += 1;
-        nextPick = 1; // First team for the next round (normal)
+        nextPick = 1; 
       }
     }
 
     if (nextRound > rounds) {
       alert('Draft complete!');
-      exitDraft(); // Automatically exit the draft when complete
+      exitDraft(); 
       return;
     }
 
@@ -98,7 +138,6 @@ const DraftCenter = () => {
       return;
     }
 
-    // Fetch player data from the server
     axios.get(`http://localhost:8000/api/draft/player/${playerName}`)
       .then(response => {
         const playerData = response.data;
@@ -111,10 +150,10 @@ const DraftCenter = () => {
               [participantName]: [...prevTeams[participantName], playerData]
             }));
 
-            setPlayerName(''); // Clear the player name input
+            setPlayerNames(prevPlayerNames => prevPlayerNames.filter(name => name.toLowerCase() !== playerName.toLowerCase()));
 
-            // Move to the next pick
-            nextPick();
+            setPlayerName(''); 
+            nextPick(); 
           })
           .catch(error => {
             if (error.response && error.response.status === 404) {
@@ -130,6 +169,12 @@ const DraftCenter = () => {
       });
   };
 
+  useEffect(() => {
+    if (isDraftStarted) {
+      recommendPlayers(playerNames); 
+    }
+  }, [playerNames]); 
+
   const exitDraft = () => {
     axios.post('http://localhost:8000/api/draft/exit', { participantNames: participants })
       .then(response => {
@@ -142,7 +187,8 @@ const DraftCenter = () => {
         setRounds('');
         setCurrentRound(1);
         setCurrentPick(1);
-        setIsDraftStarted(false); // Reset draft status
+        setIsDraftStarted(false); 
+        setRecommendations([]); 
       })
       .catch(error => {
         console.error('Error exiting draft:', error);
@@ -193,6 +239,13 @@ const DraftCenter = () => {
       </div>
 
       {!isDraftStarted && <p>Please start the draft to add players.</p>}
+
+      <h3>Recommended Players</h3>
+      <ul>
+        {recommendations.map((player, index) => (
+          <li key={index}>{player.playerName} - {player.position}</li>
+        ))}
+      </ul>
 
       <h3>Teams</h3>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
