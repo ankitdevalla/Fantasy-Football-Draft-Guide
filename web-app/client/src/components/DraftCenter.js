@@ -5,9 +5,11 @@ const DraftCenter = () => {
   const [draftPick, setDraftPick] = useState('');
   const [totalTeams, setTotalTeams] = useState('');
   const [rounds, setRounds] = useState('');
+  const [currentRound, setCurrentRound] = useState(1);
+  const [currentPick, setCurrentPick] = useState(1);
   const [participantName, setParticipantName] = useState('');
   const [playerName, setPlayerName] = useState('');
-  const [team, setTeam] = useState([]);
+  const [teams, setTeams] = useState({});
   const [participants, setParticipants] = useState([]);
   const [playerNames, setPlayerNames] = useState([]); // To store all possible player names
   const [isDraftStarted, setIsDraftStarted] = useState(false); // Track if draft is started
@@ -28,10 +30,61 @@ const DraftCenter = () => {
         console.log(response.data);
         alert('Draft started!');
         setIsDraftStarted(true); // Mark the draft as started
+        const participantsList = generateParticipants(totalTeams); // Generate participants
+        setParticipants(participantsList);
+        initializeTeams(totalTeams); // Initialize team objects
+        setParticipantName(participantsList[0]); // Set the initial participant to team_1
       })
       .catch(error => {
         console.error('Error starting draft:', error);
       });
+  };
+
+  const generateParticipants = (totalTeams) => {
+    const participantsList = [];
+    for (let i = 1; i <= totalTeams; i++) {
+      participantsList.push(`team_${i}`);
+    }
+    return participantsList;
+  };
+
+  const initializeTeams = (totalTeams) => {
+    const initialTeams = {};
+    for (let i = 1; i <= totalTeams; i++) {
+      initialTeams[`team_${i}`] = [];
+    }
+    setTeams(initialTeams);
+  };
+
+  const nextPick = () => {
+    let nextPick = currentPick;
+    let nextRound = currentRound;
+
+    if (currentRound % 2 === 1) {
+      // Odd round (normal order)
+      nextPick = currentPick + 1;
+      if (nextPick > totalTeams) {
+        nextRound += 1;
+        nextPick = totalTeams; // Last team for the next round (reversed)
+      }
+    } else {
+      // Even round (reverse order)
+      nextPick = currentPick - 1;
+      if (nextPick < 1) {
+        nextRound += 1;
+        nextPick = 1; // First team for the next round (normal)
+      }
+    }
+
+    if (nextRound > rounds) {
+      alert('Draft complete!');
+      exitDraft(); // Automatically exit the draft when complete
+      return;
+    }
+
+    setCurrentPick(nextPick);
+    setCurrentRound(nextRound);
+    setParticipantName(participants[nextPick - 1]);
   };
 
   const addPlayerToTeam = () => {
@@ -53,17 +106,18 @@ const DraftCenter = () => {
         axios.post('http://localhost:8000/api/draft/add-player', { playerName, participantName, playerData })
           .then(response => {
             console.log(response.data);
-            setTeam([...team, playerData]);
-
-            if (!participants.includes(participantName)) {
-              setParticipants([...participants, participantName]);
-            }
+            setTeams(prevTeams => ({
+              ...prevTeams,
+              [participantName]: [...prevTeams[participantName], playerData]
+            }));
 
             setPlayerName(''); // Clear the player name input
+
+            // Move to the next pick
+            nextPick();
           })
           .catch(error => {
             if (error.response && error.response.status === 404) {
-              // Player not found in available players, meaning they've already been picked
               alert(`Player ${playerName} has already been picked.`);
             } else {
               console.error('Error adding player:', error);
@@ -81,13 +135,13 @@ const DraftCenter = () => {
       .then(response => {
         console.log(response.data);
         alert('Draft exited, all teams deleted.');
-        setTeam([]);
+        setTeams({});
         setParticipants([]);
         setDraftPick('');
         setTotalTeams('');
         setRounds('');
-        setParticipantName('');
-        setDraftPick('');
+        setCurrentRound(1);
+        setCurrentPick(1);
         setIsDraftStarted(false); // Reset draft status
       })
       .catch(error => {
@@ -114,16 +168,14 @@ const DraftCenter = () => {
         <input type="number" value={rounds} onChange={(e) => setRounds(e.target.value)} />
       </div>
 
-      <div>
-        <label>Participant Name: </label>
-        <input type="text" value={participantName} onChange={(e) => setParticipantName(e.target.value)} />
-      </div>
-
       <button onClick={startDraft} disabled={isDraftStarted}>Start Draft</button>
       <button onClick={exitDraft} disabled={!isDraftStarted}>Exit Draft</button>
 
       <h3>Add Player to Team</h3>
       <div>
+        <label>Participant: </label>
+        <input type="text" value={participantName} readOnly />
+
         <label>Player Name: </label>
         <input
           type="text"
@@ -142,12 +194,19 @@ const DraftCenter = () => {
 
       {!isDraftStarted && <p>Please start the draft to add players.</p>}
 
-      <h3>Your Team</h3>
-      <ul>
-        {team.map((player, index) => (
-          <li key={index}>{player.playerName} - {player.position}</li>
+      <h3>Teams</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        {Object.keys(teams).map((teamName, index) => (
+          <div key={index} style={{ flex: 1, margin: '0 10px' }}>
+            <h4>{teamName}</h4>
+            <ul>
+              {teams[teamName].map((player, idx) => (
+                <li key={idx}>{player.playerName} - {player.position}</li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 };

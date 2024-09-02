@@ -19,7 +19,13 @@ router.post('/start', async (req, res) => {
     const players = await Player.find();
     await mongoose.connection.collection('availablePlayers').insertMany(players);
 
-    res.json({ message: 'Draft started and availablePlayers collection initialized', draftPick, totalTeams, rounds });
+    // Create a collection for each team
+    for (let i = 1; i <= totalTeams; i++) {
+      const collectionName = `team_${i}`.toLowerCase();
+      await mongoose.connection.createCollection(collectionName);
+    }
+
+    res.json({ message: 'Draft started and team collections initialized', draftPick, totalTeams, rounds });
   } catch (error) {
     res.status(500).json({ message: 'Error starting draft', error });
   }
@@ -34,7 +40,7 @@ router.post('/add-player', async (req, res) => {
 
   console.log('Received request to add player:', playerName, 'to participant:', participantName);
 
-  const collectionName = `${participantName}_team`.toLowerCase().replace(/\s+/g, '_');
+  const collectionName = participantName.toLowerCase().replace(/\s+/g, '_');
 
   try {
     // Fetch the player data from the availablePlayers collection
@@ -78,12 +84,10 @@ router.post('/add-player', async (req, res) => {
   }
 });
 
-
-
 // Route to get all player names
 router.get('/player-names', async (req, res) => {
   try {
-    const players = await Player.find().select('name -_id'); 
+    const players = await Player.find().select('name -_id');
     const playerNames = players.map(player => player.name);
     res.json(playerNames);
   } catch (error) {
@@ -117,7 +121,7 @@ router.get('/player/:playerName', async (req, res) => {
 // Route to get a participant's team
 router.get('/team/:participantName', async (req, res) => {
   const { participantName } = req.params;
-  const collectionName = `${participantName}_team`.toLowerCase().replace(/\s+/g, '_');
+  const collectionName = participantName.toLowerCase().replace(/\s+/g, '_');
 
   const ParticipantTeam = mongoose.model(collectionName, draftPickSchema);
 
@@ -136,12 +140,21 @@ router.post('/exit', async (req, res) => {
   try {
     // Drop the collection of each participant's team
     for (let participantName of participantNames) {
-      const collectionName = `${participantName}_teams`.toLowerCase().replace(/\s+/g, '_');
-      await mongoose.connection.dropCollection(collectionName);
+      const collectionName = participantName.toLowerCase().replace(/\s+/g, '_');
+      const collectionExists = await mongoose.connection.db.listCollections({ name: collectionName }).next();
+
+      if (collectionExists) {
+        await mongoose.connection.db.dropCollection(collectionName);
+        console.log(`Collection ${collectionName} dropped successfully`);
+      }
     }
 
     // Drop the availablePlayers collection
-    await mongoose.connection.db.dropCollection('availablePlayers');
+    const availablePlayersExists = await mongoose.connection.db.listCollections({ name: 'availablePlayers' }).next();
+    if (availablePlayersExists) {
+      await mongoose.connection.db.dropCollection('availablePlayers');
+      console.log('Collection availablePlayers dropped successfully');
+    }
 
     res.json({ message: 'Draft exited, all teams and available players deleted' });
   } catch (error) {
